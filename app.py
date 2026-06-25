@@ -13,13 +13,35 @@ app = Flask(__name__)
 
 MODEL  = "gpt-4o"
 
+def _openai_key() -> str:
+    if key := os.environ.get("OPENAI_API_KEY", ""):
+        return key
+    # file drop via file-browser
+    data_dir = os.environ.get("OPENHOST_APP_DATA_DIR", "")
+    if data_dir:
+        p = Path(data_dir) / "openai_key.txt"
+        if p.exists():
+            return p.read_text().strip()
+    # pull from secrets app via OpenHost zone domain
+    zone  = os.environ.get("OPENHOST_ZONE_DOMAIN", "")
+    token = os.environ.get("OPENHOST_APP_TOKEN", "")
+    if zone and token:
+        try:
+            req = urllib.request.Request(
+                f"https://secrets.{zone}/api/export",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            with urllib.request.urlopen(req, timeout=5) as r:
+                for line in r.read().decode().splitlines():
+                    if line.startswith("export OPENAI_API_KEY="):
+                        return line.split("=", 1)[1].strip().strip('"\'')
+        except Exception:
+            pass
+    return ""
+
+
 def _client():
-    key = os.environ.get("OPENAI_API_KEY")
-    if not key:
-        key_file = Path(os.environ.get("OPENHOST_APP_DATA_DIR", "")) / "openai_key.txt"
-        if key_file.exists():
-            key = key_file.read_text().strip()
-    return OpenAI(api_key=key or None)
+    return OpenAI(api_key=_openai_key() or None)
 
 EVOLVED_PROMPT = Path("evolved_prompt.txt")
 FALLBACK_PROMPT = (
