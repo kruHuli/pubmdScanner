@@ -146,27 +146,30 @@ def generate():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-    system_prompt = load_system_prompt()
-    context = (
-        f"Paper: {paper['title']}\n"
-        f"Authors: {paper['first_author']} et al. ({paper['year']})\n"
-        f"Abstract: {paper['abstract']}"
-    )
+    try:
+        system_prompt = load_system_prompt()
+        context = (
+            f"Paper: {paper['title']}\n"
+            f"Authors: {paper['first_author']} et al. ({paper['year']})\n"
+            f"Abstract: {paper['abstract']}"
+        )
 
-    monday = generate_post(system_prompt,
-        f"{context}\n\nMONDAY POST — open with the macro force that makes this research matter "
-        "right now, then zoom into a specific experiment or observation Kruthik made at his "
-        "gathering. End punchy. 200 words max.")
+        monday = generate_post(system_prompt,
+            f"{context}\n\nMONDAY POST — open with the macro force that makes this research matter "
+            "right now, then zoom into a specific experiment or observation Kruthik made at his "
+            "gathering. End punchy. 200 words max.")
 
-    wednesday = generate_post(system_prompt,
-        f"{context}\n\nWEDNESDAY POST — personal story from the gathering: a reaction, a "
-        "surprise, a conversation. Open macro, zoom personal, ask a bold rhetorical question. "
-        "End punchy. 200 words max.")
+        wednesday = generate_post(system_prompt,
+            f"{context}\n\nWEDNESDAY POST — personal story from the gathering: a reaction, a "
+            "surprise, a conversation. Open macro, zoom personal, ask a bold rhetorical question. "
+            "End punchy. 200 words max.")
 
-    friday = generate_post(system_prompt,
-        f"{context}\n\nFRIDAY POST — what was learned, one thing the research did not predict, "
-        "a challenge to the reader. End with exactly: "
-        "'Come test this with us — next gathering: [DATE PLACEHOLDER]' — 200 words max.")
+        friday = generate_post(system_prompt,
+            f"{context}\n\nFRIDAY POST — what was learned, one thing the research did not predict, "
+            "a challenge to the reader. End with exactly: "
+            "'Come test this with us — next gathering: [DATE PLACEHOLDER]' — 200 words max.")
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
     today   = datetime.date.today().isoformat()
     out_dir = POSTS_DIR / today
@@ -180,6 +183,17 @@ def generate():
         "posts": {"monday": monday, "wednesday": wednesday, "friday": friday},
         "saved_to": str(out_dir),
     })
+
+
+@app.route("/debug/env")
+def debug_env():
+    keys = sorted(os.environ.keys())
+    openai_source = "missing"
+    if os.environ.get("OPENAI_API_KEY"):
+        openai_source = "env"
+    elif os.environ.get("OPENHOST_APP_DATA_DIR") and (Path(os.environ["OPENHOST_APP_DATA_DIR"]) / "openai_key.txt").exists():
+        openai_source = "file"
+    return jsonify({"env_keys": keys, "openai_source": openai_source})
 
 
 if __name__ == "__main__":
