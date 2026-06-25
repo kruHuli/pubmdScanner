@@ -106,6 +106,34 @@ Once received: chunk → JSONL → upload → fine-tune job → swap model ID in
 
 ---
 
+### 2026-06-25 — OpenHost deployment
+
+**What was done**
+- Created `Dockerfile` (Python 3.12-alpine + uv + flask + openai)
+- Created `openhost.toml` (port 8080, 256MB, `app_data = true`)
+- Created `requirements.txt`
+- Installed `oh` CLI via `uv tool install`
+- Repo pushed to `git@github.com:kruHuli/pubmdScanner.git` (public)
+- App deployed to `kruthik.selfhost.imbue.com` via `oh app deploy`
+- Made `CLIENT = OpenAI()` lazy (`_client()`) so app boots without key at startup
+- Added `evolved_prompt.txt` few-shot examples (6 real LinkedIn posts) as fine-tuning alternative after OpenAI self-serve fine-tuning was shut down for this account tier
+
+**Secrets / OPENAI_API_KEY — unresolved**
+- OpenHost has a `secrets` app (running on port 9000, at `secrets.kruthik.selfhost.imbue.com`)
+- Key `OPENAI_API_KEY` is stored there with the correct value
+- Secrets are NOT automatically injected into container env vars on deploy/reload
+- Tried: `OPENHOST_APP_TOKEN` + `OPENHOST_ZONE_DOMAIN` to call `secrets.{zone}/api/export` at request time — did not work (root cause unknown, likely token not authorized to secrets app or zone var not set)
+- `oh` CLI has no `env` or `secrets` subcommand
+- `openhost.toml` manifest spec has no `[env]` or `[secrets]` section documented
+- **Next step**: check what env vars the container actually sees (add a `/debug/env` route or check logs), then either find the correct internal URL for secrets or use the file-browser app to drop a key file into `/data/app_data/linkedin-pipeline/openai_key.txt`
+
+**App state**
+- App is running at `kruthik.selfhost.imbue.com` (status: running)
+- `/generate` POST still fails with `Missing credentials` — OpenAI key not reaching container
+- `_openai_key()` tries: env var → `$OPENHOST_APP_DATA_DIR/openai_key.txt` → `secrets.{zone}/api/export` with app token
+
+---
+
 ### 2026-06-24 — Ponytail audit + cuts
 
 Ran `/ponytail-audit` repo-wide. All 5 findings applied. **net: -13 lines, -0 deps.**
