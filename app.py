@@ -188,6 +188,30 @@ def generate():
     })
 
 
+@app.route("/summarize", methods=["POST"])
+def summarize():
+    url = request.json.get("url", "").strip()
+    if not url:
+        return jsonify({"error": "No URL provided"}), 400
+    try:
+        paper = fetch_pubmed(url)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    try:
+        resp = _client().chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": "Summarize the following research paper abstract in 3–5 plain English sentences. No jargon. Focus on what was studied, what they found, and why it matters."},
+                {"role": "user", "content": f"Title: {paper['title']}\n\nAbstract: {paper['abstract']}"},
+            ],
+            temperature=0.3,
+            max_tokens=200,
+        )
+        return jsonify({"summary": resp.choices[0].message.content.strip()})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/debug/env")
 def debug_env():
     keys = sorted(os.environ.keys())

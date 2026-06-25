@@ -188,6 +188,22 @@
     .gen-btn:hover { background: #333; }
     .gen-btn:disabled { background: #aaa; cursor: not-allowed; }
 
+    .sum-btn {
+      padding: 8px 18px;
+      background: white;
+      color: #1a1a1a;
+      border: 1.5px solid #d0d0d0;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .sum-btn:hover { border-color: #1a1a1a; }
+    .sum-btn:disabled { color: #aaa; border-color: #e0e0e0; cursor: not-allowed; }
+
     .empty { text-align: center; padding: 60px 0; color: #aaa; font-size: 15px; }
 
     /* Posts panel */
@@ -430,6 +446,9 @@
           </div>
           <div class="card-bottom">
             ${warnHtml}
+            <button class="sum-btn" onclick="summarize('${url}', '${title.replace(/'/g,"\\'")}', '${year}', this)">
+              Summary
+            </button>
             <button class="gen-btn" onclick="generatePosts('${url}', '${title.replace(/'/g,"\\'")}', '${year}', this)">
               Generate Posts
             </button>
@@ -485,6 +504,42 @@
 
   function escHtml(s) {
     return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  async function summarize(url, title, year, btn) {
+    btn.disabled    = true;
+    btn.textContent = "Loading...";
+
+    document.getElementById("panelTitle").textContent = title;
+    document.getElementById("panelMeta").textContent  = year ? `${year} · ${url}` : url;
+    document.getElementById("panelBody").innerHTML    =
+      '<div class="generating-msg">Summarizing abstract…</div>';
+    document.getElementById("postsOverlay").classList.add("open");
+
+    try {
+      const res  = await fetch("/summarize", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({url}),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      document.getElementById("panelBody").innerHTML = `
+        <div class="post-block">
+          <div class="post-label">Abstract Summary</div>
+          <div class="post-text">${escHtml(data.summary)}</div>
+          <div class="post-actions">
+            <button class="copy-post" onclick="navigator.clipboard.writeText(this.closest('.post-block').querySelector('.post-text').textContent).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',2000)})">Copy</button>
+          </div>
+        </div>`;
+    } catch(e) {
+      document.getElementById("panelBody").innerHTML =
+        `<div class="generating-msg" style="color:#c0392b">Error: ${escHtml(e.message)}</div>`;
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = "Summary";
+    }
   }
 
   function closePanel()    { document.getElementById("postsOverlay").classList.remove("open"); }

@@ -9,7 +9,7 @@ port = 8080
 
 [routing]
 health_check = "/"
-public_paths = ["/", "/generate", "/debug/env"]
+public_paths = ["/", "/generate", "/summarize", "/debug/env"]
 
 [[links]]
 name = "Generate Posts"
