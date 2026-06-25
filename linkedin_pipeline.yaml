@@ -1,0 +1,61 @@
+schedule:
+  cron: "0 9 * * 1"   # every Monday at 9am
+  timezone: "America/Los_Angeles"
+
+cost_cap:
+  usd: 5.00
+  on_exceed: pause_and_notify
+
+human_approval_required:
+  before: external_post   # nothing goes out without sign-off
+
+agents:
+
+  - id: search_pubmed
+    name: "Search PubMed for eligible papers"
+    run: |
+      Search PubMed for randomized controlled trials published in the last 5 years on:
+      focus, cognition, handwriting, note-taking, or learning retention.
+      Filters:
+        - Study design: RCT only
+        - Participants: 50 or more
+        - Full text: freely available
+        - Language: English
+      Return top 5 results as a list of PubMed URLs with title and participant count.
+    output: candidate_papers
+
+  - id: score_papers
+    name: "Score and select best paper"
+    depends_on: search_pubmed
+    run: |
+      For each paper in candidate_papers, score it 1-10 on:
+        - participant_count: 1 if <50, scales to 10 at 500+
+        - methodology: RCT rigor, control group quality, blinding
+        - recreatability: can Kruthik run a version of this at a 20-person gathering?
+        - conflicts_of_interest: funded by industry? penalize 3 points if yes
+      Reject any paper scoring below 7/10 overall.
+      Return the single highest-scoring paper URL.
+    output: approved_paper
+    on_no_result: notify_human("No paper met the 7/10 threshold this week.")
+
+  - id: generate_content
+    name: "Generate Mon/Wed/Fri posts"
+    depends_on: score_papers
+    run: |
+      python generate_posts.py {{ approved_paper.url }}
+    output: post_files   # posts/YYYY-MM-DD/{monday,wednesday,friday}.txt
+
+  - id: push_to_notion
+    name: "Push scorecard and drafts to Notion"
+    depends_on: generate_content
+    run: |
+      Using Notion MCP, create a new page in the LinkedIn Pipeline database with:
+        - Title: paper title + run date
+        - Paper scorecard: participant count, methodology score, recreatability score, COI flag
+        - Monday draft: contents of monday.txt
+        - Wednesday draft: contents of wednesday.txt
+        - Friday draft: contents of friday.txt
+        - Status: "Awaiting approval"
+        - Source URL: approved_paper.url
+    requires_approval: true
+    approval_note: "Review all three posts in Notion before marking Status = Approved to publish."

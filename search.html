@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PubMed Search — LinkedIn Pipeline</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f7f7f5;
+      color: #1a1a1a;
+      min-height: 100vh;
+      padding: 48px 20px;
+    }
+
+    .container { max-width: 780px; margin: 0 auto; }
+
+    h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 4px; }
+    .subtitle { color: #777; font-size: 13px; margin-bottom: 32px; }
+
+    /* Search bar */
+    .search-row { display: flex; gap: 8px; margin-bottom: 12px; }
+
+    #query {
+      flex: 1;
+      padding: 13px 16px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 15px;
+      outline: none;
+      background: white;
+      transition: border-color 0.15s;
+    }
+    #query:focus { border-color: #1a1a1a; }
+    #query::placeholder { color: #aaa; }
+
+    #searchBtn {
+      padding: 13px 22px;
+      background: #1a1a1a;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    #searchBtn:hover { background: #333; }
+    #searchBtn:disabled { background: #aaa; cursor: not-allowed; }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 28px;
+    }
+
+    .filter-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: white;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 100px;
+      font-size: 13px;
+      color: #444;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .filter-pill input[type="checkbox"] { display: none; }
+    .filter-pill.active {
+      border-color: #1a1a1a;
+      background: #1a1a1a;
+      color: white;
+    }
+
+    .filter-input-group {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      background: white;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 100px;
+      font-size: 13px;
+      color: #444;
+    }
+    .filter-input-group input[type="number"] {
+      width: 56px;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      text-align: center;
+      background: transparent;
+      font-family: inherit;
+      color: #1a1a1a;
+      font-weight: 600;
+    }
+    .filter-input-group label { color: #777; }
+
+    /* Status */
+    .status {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 16px;
+      min-height: 18px;
+    }
+
+    /* Result cards */
+    .card {
+      background: white;
+      border: 1.5px solid #e8e8e8;
+      border-radius: 10px;
+      padding: 20px 22px;
+      margin-bottom: 12px;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+    .card:hover { box-shadow: 0 2px 14px rgba(0,0,0,0.07); border-color: #d0d0d0; }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .card-title {
+      font-size: 14.5px;
+      font-weight: 600;
+      line-height: 1.45;
+      flex: 1;
+    }
+    .card-title a { color: #1a1a1a; text-decoration: none; }
+    .card-title a:hover { text-decoration: underline; }
+
+    .badges { display: flex; gap: 5px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 100px;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+    }
+    .badge-rct  { background: #e8f5e9; color: #2e7d32; }
+    .badge-free { background: #e3f2fd; color: #1565c0; }
+    .badge-year { background: #f0f0f0; color: #666; }
+
+    .card-meta {
+      font-size: 12.5px;
+      color: #888;
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+
+    .card-bottom { display: flex; align-items: center; gap: 10px; }
+
+    .warn {
+      font-size: 11.5px;
+      color: #b08020;
+      background: #fffbea;
+      border: 1px solid #f0de80;
+      border-radius: 6px;
+      padding: 4px 10px;
+      flex: 1;
+    }
+
+    .gen-btn {
+      padding: 8px 18px;
+      background: #1a1a1a;
+      color: white;
+      border: none;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .gen-btn:hover { background: #333; }
+    .gen-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+    .empty { text-align: center; padding: 60px 0; color: #aaa; font-size: 15px; }
+
+    /* Posts panel */
+    .posts-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 20px;
+      overflow-y: auto;
+    }
+    .posts-overlay.open { display: flex; }
+
+    .posts-panel {
+      background: white;
+      border-radius: 14px;
+      padding: 32px;
+      width: 100%;
+      max-width: 680px;
+      position: relative;
+    }
+
+    .posts-panel h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .posts-panel .paper-meta { font-size: 12px; color: #888; margin-bottom: 24px; }
+
+    .post-block { margin-bottom: 28px; }
+    .post-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 8px;
+    }
+    .post-text {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #1a1a1a;
+      white-space: pre-wrap;
+      border: 1.5px solid #eee;
+      border-radius: 8px;
+      padding: 16px 18px;
+      background: #fafafa;
+    }
+    .post-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+    .copy-post {
+      font-size: 12px;
+      color: #888;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 6px;
+    }
+    .copy-post:hover { color: #1a1a1a; }
+    .copy-post.copied { color: #2e7d32; }
+
+    .close-btn {
+      position: absolute;
+      top: 16px; right: 20px;
+      background: none;
+      border: none;
+      font-size: 22px;
+      color: #aaa;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .close-btn:hover { color: #1a1a1a; }
+
+    .generating-msg {
+      text-align: center;
+      padding: 48px 0;
+      color: #888;
+      font-size: 15px;
+    }
+
+    @media (max-width: 580px) {
+      .card-top { flex-direction: column; }
+      .badges { justify-content: flex-start; }
+      .copy-btn { font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>PubMed Research Search</h1>
+  <p class="subtitle">Find papers for your LinkedIn content pipeline. Click a result to copy the generate command.</p>
+
+  <div class="search-row">
+    <input type="text" id="query"
+      placeholder="e.g. handwriting cognition note-taking focus students"
+      onkeydown="if(event.key==='Enter') doSearch()" />
+    <button id="searchBtn" onclick="doSearch()">Search PubMed</button>
+  </div>
+
+  <div class="filters">
+    <div class="filter-pill active" id="pill-rct" onclick="togglePill('rct')">
+      <input type="checkbox" id="rct" checked> RCT only
+    </div>
+    <div class="filter-pill active" id="pill-freetext" onclick="togglePill('freetext')">
+      <input type="checkbox" id="freetext" checked> Free full text
+    </div>
+    <div class="filter-input-group">
+      <label for="fromYear">Published after</label>
+      <input type="number" id="fromYear" value="2021" min="2000" max="2026">
+    </div>
+    <div class="filter-input-group">
+      <label for="minPart">Min participants</label>
+      <input type="number" id="minPart" value="50" min="0">
+    </div>
+  </div>
+
+  <div class="status" id="status"></div>
+  <div id="results"></div>
+</div>
+
+<!-- Posts overlay -->
+<div class="posts-overlay" id="postsOverlay" onclick="closeIfBg(event)">
+  <div class="posts-panel" id="postsPanel">
+    <button class="close-btn" onclick="closePanel()">&times;</button>
+    <h2 id="panelTitle"></h2>
+    <div class="paper-meta" id="panelMeta"></div>
+    <div id="panelBody"></div>
+  </div>
+</div>
+
+<script>
+  const BASE  = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils";
+  const IDENT = "tool=kruthik-linkedin-pipeline&email=itskrutak%40gmail.com";
+
+  function togglePill(id) {
+    const cb   = document.getElementById(id);
+    const pill = document.getElementById("pill-" + id);
+    cb.checked = !cb.checked;
+    pill.classList.toggle("active", cb.checked);
+  }
+
+  function buildQuery() {
+    const topic = document.getElementById("query").value.trim();
+    if (!topic) return null;
+    const parts = [topic];
+    if (document.getElementById("rct").checked)
+      parts.push("Randomized Controlled Trial[pt]");
+    if (document.getElementById("freetext").checked)
+      parts.push("free full text[sb]");
+    const yr = document.getElementById("fromYear").value;
+    if (yr) parts.push(`${yr}:3000[dp]`);
+    return parts.join(" AND ");
+  }
+
+  async function doSearch() {
+    const query = buildQuery();
+    if (!query) return;
+
+    const btn     = document.getElementById("searchBtn");
+    const status  = document.getElementById("status");
+    const results = document.getElementById("results");
+
+    btn.disabled    = true;
+    btn.textContent = "Searching...";
+    status.textContent = "Querying PubMed...";
+    results.innerHTML  = "";
+
+    try {
+      const searchRes = await fetch(
+        `${BASE}/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmax=15&retmode=json&${IDENT}`
+      );
+      const searchData = await searchRes.json();
+      const ids = searchData.esearchresult?.idlist || [];
+      const total = searchData.esearchresult?.count || 0;
+
+      if (ids.length === 0) {
+        status.textContent = "No results. Try fewer filters or different keywords.";
+        results.innerHTML = '<div class="empty">No papers found matching those conditions.</div>';
+        return;
+      }
+
+      status.textContent = `Found ${total} papers — loading top ${ids.length}...`;
+
+      const summaryRes = await fetch(
+        `${BASE}/esummary.fcgi?db=pubmed&id=${ids.join(",")}&retmode=json&${IDENT}`
+      );
+      const summaryData = await summaryRes.json();
+
+      renderResults(summaryData.result, ids);
+      status.textContent = `Showing ${ids.length} of ${total} results`;
+
+    } catch (e) {
+      status.textContent = "Could not reach PubMed. Check your connection and try again.";
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = "Search PubMed";
+    }
+  }
+
+  function renderResults(data, ids) {
+    const minPart   = parseInt(document.getElementById("minPart").value) || 0;
+    const container = document.getElementById("results");
+
+    container.innerHTML = ids.map(id => {
+      const art = data[id];
+      if (!art || art.error) return "";
+
+      const title   = art.title?.replace(/\.$/, "") || "Untitled";
+      const authors = art.authors?.length
+        ? art.authors[0].name + (art.authors.length > 1 ? " et al." : "")
+        : "Unknown authors";
+      const journal = art.source || "";
+      const year    = (art.pubdate || "").slice(0, 4);
+      const url     = `https://pubmed.ncbi.nlm.nih.gov/${id}/`;
+      const cmd     = `python generate_posts.py ${url}`;
+
+      const isRct = (art.pubtype || []).some(t =>
+        t.toLowerCase().includes("randomized") || t.toLowerCase().includes("controlled")
+      );
+      const isFree = (art.articleids || []).some(a => a.idtype === "pmc");
+
+      const badges = [
+        isRct  ? '<span class="badge badge-rct">RCT</span>'        : "",
+        isFree ? '<span class="badge badge-free">Free full text</span>' : "",
+        year   ? `<span class="badge badge-year">${year}</span>`   : "",
+      ].join("");
+
+      const warnHtml = minPart > 0
+        ? `<span class="warn">Verify ≥${minPart} participants in abstract</span>`
+        : "";
+
+      return `
+        <div class="card">
+          <div class="card-top">
+            <div class="card-title">
+              <a href="${url}" target="_blank">${title}</a>
+            </div>
+            <div class="badges">${badges}</div>
+          </div>
+          <div class="card-meta">
+            ${authors}${journal ? " &middot; " + journal : ""}${year ? " &middot; " + year : ""} &middot; PMID&nbsp;${id}
+          </div>
+          <div class="card-bottom">
+            ${warnHtml}
+            <button class="gen-btn" onclick="generatePosts('${url}', '${title.replace(/'/g,"\\'")}', '${year}', this)">
+              Generate Posts
+            </button>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  async function generatePosts(url, title, year, btn) {
+    btn.disabled    = true;
+    btn.textContent = "Generating...";
+
+    document.getElementById("panelTitle").textContent = title;
+    document.getElementById("panelMeta").textContent  = year ? `${year} · ${url}` : url;
+    document.getElementById("panelBody").innerHTML    =
+      '<div class="generating-msg">Generating posts with gpt-4o…<br><small style="color:#bbb;font-size:12px">Usually takes 10–20 seconds</small></div>';
+    document.getElementById("postsOverlay").classList.add("open");
+
+    try {
+      const res  = await fetch("/generate", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({url}),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      document.getElementById("panelBody").innerHTML = ["monday","wednesday","friday"].map(day => `
+        <div class="post-block">
+          <div class="post-label">${day.charAt(0).toUpperCase() + day.slice(1)}</div>
+          <div class="post-text" id="post-${day}">${escHtml(data.posts[day])}</div>
+          <div class="post-actions">
+            <button class="copy-post" onclick="copyPost('${day}', this)">Copy</button>
+          </div>
+        </div>`).join("");
+    } catch(e) {
+      document.getElementById("panelBody").innerHTML =
+        `<div class="generating-msg" style="color:#c0392b">Error: ${escHtml(e.message)}</div>`;
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = "Generate Posts";
+    }
+  }
+
+  function copyPost(day, btn) {
+    const text = document.getElementById("post-" + day).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    });
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function closePanel()    { document.getElementById("postsOverlay").classList.remove("open"); }
+  function closeIfBg(e)    { if (e.target === document.getElementById("postsOverlay")) closePanel(); }
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+[app]
+name = "linkedin-pipeline"
+version = "0.1.0"
+description = "LinkedIn content pipeline — generates Mon/Wed/Fri posts in Kruthik's voice from PubMed research"
+
+[runtime.container]
+image = "Dockerfile"
+port = 8080
+
+[routing]
+health_check = "/"
+public_paths = ["/", "/generate"]
+
+[[links]]
+name = "Generate Posts"
+path = "/"
+
+[resources]
+memory_mb = 256
+cpu_cores = 0.25
+
+[data]
+app_data = true

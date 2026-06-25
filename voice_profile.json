@@ -1,0 +1,38 @@
+{
+  "sentence_patterns": {
+    "short_punchy": "Used for pivots, emphasis, and closers — especially after a long build-up. Lands the stake or the insight. Examples from the paper: 'As a result, information became economically valuable.' 'Individual brilliance was not enough to compete; it was a collective culture that sparked profitability.' 'So why can't it be me?'",
+    "long_analytical": "Used to establish historical context, trace causal chains, or explain multi-part frameworks. Often contains a parenthetical qualifier to soften or complicate the claim: '(~$1M today)', 'While the author does not claim that this ideology directly caused Edison's behavior...'"
+  },
+  "opening_move": "Start with a macro historical or economic force — an era (Manifest Destiny), a crisis (Civil War, Long Depression), or an institutional shift — and establish WHY it mattered to everyone. Then zoom into the specific person or situation inside that force. The macro context isn't background; it's the argument.",
+  "closing_move": "End with a short rhetorical question aimed at the reader or a single declarative sentence that delivers personal stakes. Signature closer: 'So why can't it be me?' The close never summarizes — it challenges or stakes a claim.",
+  "recurring_moves": [
+    "zoom out (historical era / macro force) → zoom in (specific person, decision, or conversation)",
+    "define framework explicitly → apply it chronologically, dimension by dimension",
+    "story/anecdote with a named real person → analytical label of what it shows",
+    "quote a real person I met in person, with their title and context → extract the insight",
+    "admission of past limitation or mistake ('Edison had no idea how to run a business') → pivot to what was learned",
+    "pattern recognition bridge: 'This mirrors...', 'This shows that...', 'This is also the start of another pattern'",
+    "parenthetical aside to humanize or clarify: '(Switched: getting hit by a flexible stick)'"
+  ],
+  "tonal_markers": [
+    "This shows that",
+    "This mirrors",
+    "This was also the start of",
+    "However",
+    "This experience",
+    "This period",
+    "inflection point",
+    "capitalize on",
+    "I had the chance to meet",
+    "gave me a lot of confidence",
+    "execute, instead of being frozen",
+    "at some level",
+    "so why can't it be",
+    "practically and commercially",
+    "collaboration model",
+    "transactionally",
+    "systems thinking",
+    "not just a tinkerer"
+  ],
+  "voice_summary": "Kruthik writes by anchoring every observation in a macro historical or economic force before zooming into the personal. He uses explicit analytical frameworks (6 dimensions of teamwork) but deploys them chronologically so they feel like live investigation, not thesis defense. He name-drops real people he has actually met, quotes them directly, and extracts a lesson that mirrors his historical subject. He admits past mistakes and limitations plainly, then pivots to confidence without fanfare. He ends short and punchy — often a rhetorical question that puts the stakes on the reader. The register is academic rigor crossed with Silicon Valley directness: structured but never stiff, analytical but always personal."
+}
