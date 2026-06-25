@@ -202,7 +202,10 @@ def debug_env():
         attempts    = {}
 
         secrets_host = f"secrets.{zone}"
+        host_ip = router_url.split("://")[-1].split(":")[0] if router_url else "host.containers.internal"
         for label, url, extra_headers in [
+            ("port9000_direct",    f"http://{host_ip}:9000/api/export", {}),
+            ("port9000_host_hdr",  f"http://{host_ip}:9000/api/export", {"Host": secrets_host}),
             ("router+host_header", f"{router_url}/api/export" if router_url else "", {"Host": secrets_host}),
             ("subdomain",          f"https://secrets.{zone}/api/export" if zone else "", {}),
         ]:
