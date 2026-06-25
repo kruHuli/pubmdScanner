@@ -202,8 +202,10 @@ def debug_env():
         attempts    = {}
 
         for label, url in [
-            ("router_url",   f"{router_url}/app_proxy/secrets/api/export" if router_url else ""),
-            ("subdomain",    f"https://secrets.{zone}/api/export" if zone else ""),
+            ("router_via_host",  f"{router_url}/api/export" if router_url else ""),
+            ("router_app_proxy", f"{router_url}/app_proxy/secrets/api/export" if router_url else ""),
+            ("router_secrets",   f"{router_url}/secrets/api/export" if router_url else ""),
+            ("subdomain",        f"https://secrets.{zone}/api/export" if zone else ""),
         ]:
             if not url:
                 continue
@@ -225,6 +227,7 @@ def debug_env():
         "openai_source": openai_source,
         "secrets_error": secrets_error,
         "zone": os.environ.get("OPENHOST_ZONE_DOMAIN", ""),
+        "router_url": os.environ.get("OPENHOST_ROUTER_URL", ""),
         "data_dir": os.environ.get("OPENHOST_APP_DATA_DIR", ""),
     })
 
