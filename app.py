@@ -11,8 +11,11 @@ from openai import OpenAI
 BASE_DIR = Path(__file__).parent
 app = Flask(__name__)
 
-CLIENT = OpenAI()
 MODEL  = "gpt-4o"
+
+def _client():
+    # ponytail: lazy so the app boots without OPENAI_API_KEY set at startup
+    return OpenAI()
 
 EVOLVED_PROMPT = Path("evolved_prompt.txt")
 FALLBACK_PROMPT = (
@@ -88,7 +91,7 @@ def _clean_truncate(text, limit=1100):
 
 
 def generate_post(system_prompt, instruction):
-    resp = CLIENT.chat.completions.create(
+    resp = _client().chat.completions.create(
         model=MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
