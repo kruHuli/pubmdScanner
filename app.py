@@ -14,8 +14,12 @@ app = Flask(__name__)
 MODEL  = "gpt-4o"
 
 def _client():
-    # ponytail: lazy so the app boots without OPENAI_API_KEY set at startup
-    return OpenAI()
+    key = os.environ.get("OPENAI_API_KEY")
+    if not key:
+        key_file = Path(os.environ.get("OPENHOST_APP_DATA_DIR", "")) / "openai_key.txt"
+        if key_file.exists():
+            key = key_file.read_text().strip()
+    return OpenAI(api_key=key or None)
 
 EVOLVED_PROMPT = Path("evolved_prompt.txt")
 FALLBACK_PROMPT = (
