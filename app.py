@@ -189,11 +189,37 @@ def generate():
 def debug_env():
     keys = sorted(os.environ.keys())
     openai_source = "missing"
+    secrets_error = None
+
     if os.environ.get("OPENAI_API_KEY"):
         openai_source = "env"
     elif os.environ.get("OPENHOST_APP_DATA_DIR") and (Path(os.environ["OPENHOST_APP_DATA_DIR"]) / "openai_key.txt").exists():
         openai_source = "file"
-    return jsonify({"env_keys": keys, "openai_source": openai_source})
+    else:
+        zone  = os.environ.get("OPENHOST_ZONE_DOMAIN", "")
+        token = os.environ.get("OPENHOST_APP_TOKEN", "")
+        if zone and token:
+            try:
+                req = urllib.request.Request(
+                    f"https://secrets.{zone}/api/export",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                with urllib.request.urlopen(req, timeout=5) as r:
+                    body = r.read().decode()
+                found = any(line.startswith("export OPENAI_API_KEY=") for line in body.splitlines())
+                secrets_error = f"fetched ok, key_found={found}, lines={len(body.splitlines())}"
+                if found:
+                    openai_source = "secrets"
+            except Exception as exc:
+                secrets_error = str(exc)
+
+    return jsonify({
+        "env_keys": keys,
+        "openai_source": openai_source,
+        "secrets_error": secrets_error,
+        "zone": os.environ.get("OPENHOST_ZONE_DOMAIN", ""),
+        "data_dir": os.environ.get("OPENHOST_APP_DATA_DIR", ""),
+    })
 
 
 if __name__ == "__main__":
