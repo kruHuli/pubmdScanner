@@ -22,19 +22,22 @@ def _openai_key() -> str:
         p = Path(data_dir) / "openai_key.txt"
         if p.exists():
             return p.read_text().strip()
-    # pull from secrets app via OpenHost zone domain
-    zone  = os.environ.get("OPENHOST_ZONE_DOMAIN", "")
-    token = os.environ.get("OPENHOST_APP_TOKEN", "")
-    if zone and token:
+    # pull from secrets service via OpenHost cross-app router
+    router_url = os.environ.get("OPENHOST_ROUTER_URL", "")
+    token      = os.environ.get("OPENHOST_APP_TOKEN", "")
+    if router_url and token:
         try:
-            req = urllib.request.Request(
-                f"https://secrets.{zone}/api/export",
-                headers={"Authorization": f"Bearer {token}"},
+            body = b'{"keys": ["OPENAI_API_KEY"]}'
+            req  = urllib.request.Request(
+                f"{router_url}/api/services/v2/call/secrets/get",
+                data=body,
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
             )
             with urllib.request.urlopen(req, timeout=5) as r:
-                for line in r.read().decode().splitlines():
-                    if line.startswith("export OPENAI_API_KEY="):
-                        return line.split("=", 1)[1].strip().strip('"\'')
+                import json as _json
+                data = _json.loads(r.read())
+                if key := data.get("secrets", {}).get("OPENAI_API_KEY", ""):
+                    return key
         except Exception:
             pass
     return ""
@@ -201,26 +204,25 @@ def debug_env():
         router_url  = os.environ.get("OPENHOST_ROUTER_URL", "")
         attempts    = {}
 
-        secrets_host = f"secrets.{zone}"
-        host_ip = router_url.split("://")[-1].split(":")[0] if router_url else "host.containers.internal"
-        for label, url, extra_headers in [
-            ("port9000_direct",    f"http://{host_ip}:9000/api/export", {}),
-            ("port9000_host_hdr",  f"http://{host_ip}:9000/api/export", {"Host": secrets_host}),
-            ("router+host_header", f"{router_url}/api/export" if router_url else "", {"Host": secrets_host}),
-            ("subdomain",          f"https://secrets.{zone}/api/export" if zone else "", {}),
-        ]:
-            if not url:
-                continue
+        if router_url and token:
             try:
-                req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}", **extra_headers})
+                import json as _json
+                body = b'{"keys": ["OPENAI_API_KEY"]}'
+                req  = urllib.request.Request(
+                    f"{router_url}/api/services/v2/call/secrets/get",
+                    data=body,
+                    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                )
                 with urllib.request.urlopen(req, timeout=5) as r:
-                    body = r.read().decode()
-                found = any(line.startswith("export OPENAI_API_KEY=") for line in body.splitlines())
-                attempts[label] = f"ok, key_found={found}, lines={len(body.splitlines())}"
-                if found and openai_source == "missing":
-                    openai_source = f"secrets/{label}"
+                    data = _json.loads(r.read())
+                key_found = bool(data.get("secrets", {}).get("OPENAI_API_KEY"))
+                attempts["v2_secrets"] = f"ok, key_found={key_found}, missing={data.get('missing')}"
+                if key_found:
+                    openai_source = "secrets/v2"
+            except urllib.error.HTTPError as exc:
+                attempts["v2_secrets"] = f"HTTP {exc.code}: {exc.read().decode()}"
             except Exception as exc:
-                attempts[label] = str(exc)
+                attempts["v2_secrets"] = str(exc)
 
         secrets_error = attempts
 
