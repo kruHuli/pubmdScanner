@@ -201,16 +201,15 @@ def debug_env():
         router_url  = os.environ.get("OPENHOST_ROUTER_URL", "")
         attempts    = {}
 
-        for label, url in [
-            ("router_via_host",  f"{router_url}/api/export" if router_url else ""),
-            ("router_app_proxy", f"{router_url}/app_proxy/secrets/api/export" if router_url else ""),
-            ("router_secrets",   f"{router_url}/secrets/api/export" if router_url else ""),
-            ("subdomain",        f"https://secrets.{zone}/api/export" if zone else ""),
+        secrets_host = f"secrets.{zone}"
+        for label, url, extra_headers in [
+            ("router+host_header", f"{router_url}/api/export" if router_url else "", {"Host": secrets_host}),
+            ("subdomain",          f"https://secrets.{zone}/api/export" if zone else "", {}),
         ]:
             if not url:
                 continue
             try:
-                req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+                req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}", **extra_headers})
                 with urllib.request.urlopen(req, timeout=5) as r:
                     body = r.read().decode()
                 found = any(line.startswith("export OPENAI_API_KEY=") for line in body.splitlines())
