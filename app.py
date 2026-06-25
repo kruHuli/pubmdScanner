@@ -196,22 +196,29 @@ def debug_env():
     elif os.environ.get("OPENHOST_APP_DATA_DIR") and (Path(os.environ["OPENHOST_APP_DATA_DIR"]) / "openai_key.txt").exists():
         openai_source = "file"
     else:
-        zone  = os.environ.get("OPENHOST_ZONE_DOMAIN", "")
-        token = os.environ.get("OPENHOST_APP_TOKEN", "")
-        if zone and token:
+        zone        = os.environ.get("OPENHOST_ZONE_DOMAIN", "")
+        token       = os.environ.get("OPENHOST_APP_TOKEN", "")
+        router_url  = os.environ.get("OPENHOST_ROUTER_URL", "")
+        attempts    = {}
+
+        for label, url in [
+            ("router_url",   f"{router_url}/app_proxy/secrets/api/export" if router_url else ""),
+            ("subdomain",    f"https://secrets.{zone}/api/export" if zone else ""),
+        ]:
+            if not url:
+                continue
             try:
-                req = urllib.request.Request(
-                    f"https://secrets.{zone}/api/export",
-                    headers={"Authorization": f"Bearer {token}"},
-                )
+                req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
                 with urllib.request.urlopen(req, timeout=5) as r:
                     body = r.read().decode()
                 found = any(line.startswith("export OPENAI_API_KEY=") for line in body.splitlines())
-                secrets_error = f"fetched ok, key_found={found}, lines={len(body.splitlines())}"
-                if found:
-                    openai_source = "secrets"
+                attempts[label] = f"ok, key_found={found}, lines={len(body.splitlines())}"
+                if found and openai_source == "missing":
+                    openai_source = f"secrets/{label}"
             except Exception as exc:
-                secrets_error = str(exc)
+                attempts[label] = str(exc)
+
+        secrets_error = attempts
 
     return jsonify({
         "env_keys": keys,
