@@ -206,6 +206,57 @@
 
     .empty { text-align: center; padding: 60px 0; color: #aaa; font-size: 15px; }
 
+    /* T&C gate */
+    .tc-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(4px);
+    }
+    .tc-panel {
+      background: white;
+      border-radius: 16px;
+      padding: 36px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+    }
+    .tc-panel h2 { font-size: 18px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.2px; }
+    .tc-panel .tc-sub { font-size: 12px; color: #888; margin-bottom: 24px; }
+    .tc-list { list-style: none; padding: 0; margin: 0 0 28px; display: flex; flex-direction: column; gap: 12px; }
+    .tc-list li {
+      display: flex;
+      gap: 10px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: #333;
+    }
+    .tc-list li::before {
+      content: "—";
+      color: #bbb;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .tc-agree {
+      width: 100%;
+      padding: 13px;
+      background: #1a1a1a;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .tc-agree:hover { background: #333; }
+    .tc-footer { margin-top: 12px; text-align: center; font-size: 11px; color: #bbb; }
+
     /* Posts panel */
     .posts-overlay {
       display: none;
@@ -322,6 +373,22 @@
   <div id="results"></div>
 </div>
 
+<!-- T&C gate -->
+<div class="tc-overlay" id="tcOverlay">
+  <div class="tc-panel">
+    <h2>Before you search</h2>
+    <p class="tc-sub">A few things to know about how this tool works.</p>
+    <ul class="tc-list">
+      <li>This tool searches PubMed and surfaces peer-reviewed research. It does not verify study quality or replicate results — read the papers yourself before citing them.</li>
+      <li>The "Generate Posts" feature uses AI to draft content. All output is a starting point for human review, not a finished product.</li>
+      <li>Nothing generated here is posted anywhere automatically. You decide what goes out.</li>
+      <li>This is a personal tool. Don't use it to produce content that misrepresents research findings.</li>
+    </ul>
+    <button class="tc-agree" onclick="acceptTC()">I understand — let me in</button>
+    <p class="tc-footer">This prompt won't appear again on this device.</p>
+  </div>
+</div>
+
 <!-- Posts overlay -->
 <div class="posts-overlay" id="postsOverlay" onclick="closeIfBg(event)">
   <div class="posts-panel" id="postsPanel">
@@ -333,6 +400,15 @@
 </div>
 
 <script>
+  // T&C gate
+  if (localStorage.getItem("tc_accepted")) {
+    document.getElementById("tcOverlay").remove();
+  }
+  function acceptTC() {
+    localStorage.setItem("tc_accepted", "1");
+    document.getElementById("tcOverlay").remove();
+  }
+
   const BASE  = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils";
   const IDENT = "tool=kruthik-linkedin-pipeline&email=itskrutak%40gmail.com";
 
